@@ -27,8 +27,12 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif engine.game_over and event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
-                running = False
+            elif engine.game_over:
+                selection = engine.handle_game_over_event(event)
+                if selection == "Exit":
+                    running = False
+                elif selection is not None:
+                    engine.restart(selection)
             else:
                 engine.handle_event(event)
 

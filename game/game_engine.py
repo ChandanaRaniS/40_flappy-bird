@@ -6,25 +6,82 @@ from .pipe import Pipe
 
 WHITE = (255, 255, 255)
 GREEN = (0, 150, 0)
+RED = (190, 55, 55)
+
+DIFFICULTIES = {
+    "Easy": (3, 180),
+    "Medium": (4, 150),
+    "Hard": (6, 120),
+}
 
 class GameEngine:
     def __init__(self, width, height):
         self.width = width
         self.height = height
 
-        self.bird = Bird(width // 4, height // 2)
-        self.pipe_speed = 4
         self.pipe_interval = 90  # frames between pipe spawns
-        self._spawn_timer = 0
-        self.pipes = [Pipe(width + 100, height, speed=self.pipe_speed)]
-
-        self.score = 0
         self.font = pygame.font.SysFont("Arial", 30)
         self.game_over_font = pygame.font.SysFont("Arial", 48, bold=True)
         self.game_over_prompt_font = pygame.font.SysFont("Arial", 22)
         self.game_over_overlay = pygame.Surface((width, height), pygame.SRCALPHA)
         self.game_over_overlay.fill((0, 0, 0, 160))
+        self.game_over_options = self._make_game_over_options()
+        self.restart("Medium")
+
+    def _make_game_over_options(self):
+        labels = ("Easy", "Medium", "Hard", "Exit")
+        button_width = 100
+        button_height = 44
+        button_gap = 8
+        total_width = len(labels) * button_width + (len(labels) - 1) * button_gap
+        left = (self.width - total_width) // 2
+        top = self.height // 2 + 5
+        return {
+            label: pygame.Rect(
+                left + index * (button_width + button_gap),
+                top,
+                button_width,
+                button_height,
+            )
+            for index, label in enumerate(labels)
+        }
+
+    def restart(self, difficulty):
+        self.difficulty = difficulty
+        self.pipe_speed, self.pipe_gap = DIFFICULTIES[difficulty]
+        self.bird = Bird(self.width // 4, self.height // 2)
+        self._spawn_timer = 0
+        self.pipes = [
+            Pipe(
+                self.width + 100,
+                self.height,
+                gap=self.pipe_gap,
+                speed=self.pipe_speed,
+            )
+        ]
+        self.score = 0
         self.game_over = False
+
+    def handle_game_over_event(self, event):
+        if not self.game_over:
+            return None
+
+        if event.type == pygame.KEYDOWN:
+            key_selections = {
+                pygame.K_1: "Easy",
+                pygame.K_2: "Medium",
+                pygame.K_3: "Hard",
+                pygame.K_4: "Exit",
+                pygame.K_ESCAPE: "Exit",
+            }
+            return key_selections.get(event.key)
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            for label, rect in self.game_over_options.items():
+                if rect.collidepoint(event.pos):
+                    return label
+
+        return None
 
     def handle_event(self, event):
         if self.game_over:
@@ -85,8 +142,13 @@ class GameEngine:
             title = self.game_over_font.render("Game Over", True, WHITE)
             final_score = self.font.render(f"Final Score: {self.score}", True, WHITE)
             prompt = self.game_over_prompt_font.render(
-                "Press any key or click to exit", True, WHITE
+                "Press 1-3 or click a difficulty; 4 or Esc to exit", True, WHITE
             )
-            screen.blit(title, title.get_rect(center=(self.width // 2, self.height // 2 - 60)))
-            screen.blit(final_score, final_score.get_rect(center=(self.width // 2, self.height // 2)))
-            screen.blit(prompt, prompt.get_rect(center=(self.width // 2, self.height // 2 + 50)))
+            screen.blit(title, title.get_rect(center=(self.width // 2, self.height // 2 - 110)))
+            screen.blit(final_score, final_score.get_rect(center=(self.width // 2, self.height // 2 - 58)))
+            for label, rect in self.game_over_options.items():
+                button_color = RED if label == "Exit" else GREEN
+                pygame.draw.rect(screen, button_color, rect, border_radius=4)
+                option = self.game_over_prompt_font.render(label, True, WHITE)
+                screen.blit(option, option.get_rect(center=rect.center))
+            screen.blit(prompt, prompt.get_rect(center=(self.width // 2, self.height // 2 + 72)))
