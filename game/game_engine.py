@@ -20,9 +20,16 @@ class GameEngine:
 
         self.score = 0
         self.font = pygame.font.SysFont("Arial", 30)
+        self.game_over_font = pygame.font.SysFont("Arial", 48, bold=True)
+        self.game_over_prompt_font = pygame.font.SysFont("Arial", 22)
+        self.game_over_overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+        self.game_over_overlay.fill((0, 0, 0, 160))
         self.game_over = False
 
     def handle_event(self, event):
+        if self.game_over:
+            return
+
         # Flap is edge-triggered (KEYDOWN / MOUSEBUTTONDOWN), not held.
         if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
             self.bird.flap()
@@ -72,7 +79,14 @@ class GameEngine:
         score_text = self.font.render(f"Score: {self.score}", True, WHITE)
         screen.blit(score_text, (10, 10))
 
-        if self.game_over and not getattr(self, "_game_over_logged", False):
-            # NOTE: no proper game-over screen yet - see Task 2 in the README.
-            print("Game over! Final score:", self.score)
-            self._game_over_logged = True
+        if self.game_over:
+            screen.blit(self.game_over_overlay, (0, 0))
+
+            title = self.game_over_font.render("Game Over", True, WHITE)
+            final_score = self.font.render(f"Final Score: {self.score}", True, WHITE)
+            prompt = self.game_over_prompt_font.render(
+                "Press any key or click to exit", True, WHITE
+            )
+            screen.blit(title, title.get_rect(center=(self.width // 2, self.height // 2 - 60)))
+            screen.blit(final_score, final_score.get_rect(center=(self.width // 2, self.height // 2)))
+            screen.blit(prompt, prompt.get_rect(center=(self.width // 2, self.height // 2 + 50)))
